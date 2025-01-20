@@ -1,17 +1,15 @@
 # routes.py
 
-from flask import Flask, jsonify, render_template, redirect, url_for, flash
-from models import db, User, Course, Registration
-from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+import os
+from flask import jsonify, render_template, redirect, url_for, flash, request
+from flask_login import login_user, logout_user, current_user, login_required
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
-app = Flask(__name__)
-app.config.from_object('config.Config')
-db.init_app(app)
+from app.models import db, User, Course
+from app import create_app
 
-login = LoginManager(app)
-login.login_view = 'login'
+app = create_app()
 
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -21,13 +19,13 @@ class RegistrationForm(FlaskForm):
     Submit = SubmitField('Register')
 
     @staticmethod
-    def validate_username(self, username):
+    def validate_username(username):
         user = User.query.filter_by(username=username.data).first()
         if user is not None:
             raise ValidationError('Please use a different username.')
 
     @staticmethod
-    def validate_email(self, email):
+    def validate_email(email):
         user = User.query.filter_by(email=email.data).first()
         if user is not None:
             raise ValidationError('Please use a different email address.')
@@ -43,11 +41,41 @@ class CourseForm(FlaskForm):
     course_description = StringField('Course Description', validators=[DataRequired()])
     submit = SubmitField('Submit')
 
+@app.route('/')
+def index():
+    template_path = os.path.join(app.template_folder, 'index.html')
+    print(f"Template path: {template_path}")
+    if os.path.exists(template_path):
+        return render_template('index.html')
+    else:
+        return "Template not found", 404
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json()
+    username = data['username']
+    email = data['email']
+    password = data['password']
+
+    if not username or not email or not password:
+        return jsonify({'error': 'Missing required fields.'}), 400
+
+    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Username already registered.'}), 400
+
+    user = User(username=username, email=email, role='student')
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({'message': 'User registered successfully'}), 200
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data, role='student', password=form.password.data)
+        user = User(username=form.username.data, email=form.email.data, role='student')
+        user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
         flash('Congratulations! You are now registered!', 'success')
@@ -73,11 +101,19 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
+@app.route('/api/courses', methods=['GET'])
+@login_required
+def api_get_courses():
+    courses = Course.query.all()
+    return jsonify([{'course_id': course.course_id, 'course_name': course.course_name, 'course_description': course.course_description, 'instructor_id': course.instructor_id} for course in courses])
+
 @app.route('/courses', methods=['GET'])
 @login_required
 def get_courses():
     courses = Course.query.all()
     return jsonify([course.title for course in courses])
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/test-static')
+def test_static():
+    return app.send_static_file('css/styles.css')
+

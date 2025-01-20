@@ -15,9 +15,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     courses = db.relationship('Registration', backref='student', lazy=True)
 
-    def __init__(self, username, password, role, email):
+    def __init__(self, username, role, email):
         self.username = username
-        self.password = password
         self.role = role
         self.email = email
 
@@ -32,7 +31,7 @@ class Course(db.Model):
     course_id = db.Column(db.Integer, primary_key=True)
     course_name = db.Column(db.String(64), unique=True, nullable=False)
     course_description = db.Column(db.Text, nullable=True)
-    instructor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    instructor_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
     registrations = db.relationship('Registration', backref='course', lazy=True)
 
 class Registration(db.Model):

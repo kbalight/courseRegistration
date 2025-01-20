@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   web:
     build: .
@@ -7,6 +5,8 @@ services:
       - "5000:5000"
     environment:
       - FLASK_ENV=development
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URI=${DATABASE_URL}
     volumes:
       - .:/app
     depends_on:
@@ -15,9 +15,9 @@ services:
   db:
     image: postgres:13
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: $RFV9ol.)P:?8ik,
-      POSTGRES_DB: courseregistration
+      - POSTGRES_USER={POSTGRES_USER}
+      - POSTGRES_PASSWORD={POSTGRES_PASSWORD}
+      - POSTGRES_DB={POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
