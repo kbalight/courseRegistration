@@ -1,7 +1,7 @@
 # routes.py
 
 import os
-from flask import jsonify, render_template, redirect, url_for, flash, request
+from flask import Blueprint, jsonify, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
@@ -16,7 +16,7 @@ class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     password2 = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
-    Submit = SubmitField('Register')
+    submit = SubmitField('Register')
 
     @staticmethod
     def validate_username(username):
@@ -34,7 +34,7 @@ class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
-    Submit = SubmitField('Sign In')
+    submit = SubmitField('Sign In')
 
 class CourseForm(FlaskForm):
     course_name = StringField('Course Name', validators=[DataRequired()])
@@ -50,12 +50,7 @@ def index():
     else:
         return "Template not found", 404
 
-@app.route('/api/register', methods=['POST'])
-def api_register():
-    data = request.get_json()
-    username = data['username']
-    email = data['email']
-    password = data['password']
+
 
     if not username or not email or not password:
         return jsonify({'error': 'Missing required fields.'}), 400
