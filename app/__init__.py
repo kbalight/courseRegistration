@@ -9,7 +9,7 @@ from app.routes import auth
 def create_app():
     """Initialize Flask app and configure authentication"""
 
-    
+    # Ensure Flask knows where to find templates
     app = Flask(__name__, template_folder="templates")
     
     # Load configuration from config.py
