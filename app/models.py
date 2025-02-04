@@ -1,41 +1,79 @@
 # models.py
 
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
+import boto3
+from config import Config
 
-db = SQLAlchemy()
+# Set up AWS DynamoDB connection
+# AWS credentials are required if IAM roles are not being used
+dynamodb = boto3.resource(
+    'dynamodb',
+    region_name=Config.AWS_REGION,
+    aws_access_key_id=Config.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=Config.AWS_SECRET_ACCESS_KEY
+)
 
-class User(UserMixin, db.Model):
-    __tablename__ = 'users'
-    user_id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, nullable=False)
-    password = db.Column(db.String(128))
-    role =db.Column(db.String(64), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    courses = db.relationship('Registration', backref='student', lazy=True)
+# Define tables
+users_table = dynamodb.Table(Config.USERS_TABLE)
+courses_table = dynamodb.Table(Config.COURSES_TABLE)
+registrations_table = dynamodb.Table(Config.REGISTRATIONS_TABLE)
+faculty_table = dynamodb.Table(Config.FACULTY_TABLE)
 
-    def __init__(self, username, role, email):
-        self.username = username
-        self.role = role
-        self.email = email
+def generate_user_id(first_name, last_name):
+    """Generate a user ID by combining first and last name."""
+    return (first_name + last_name).replace(" ", "").lower()
 
-    def set_password(self, password):
-        self.password = generate_password_hash(password)
+def create_user(first_name, last_name, password, role):
+    """Registers a new user in DynamoDB."""
+    user_id = generate_user_id(first_name, last_name)
+    
+    # Check if user already exists
+    response = users_table.get_item(Key={'user_id': user_id})
+    if 'Item' in response:
+        return {"error": "User already exists"}, 400
 
-    def check_password(self, password):
-        return check_password_hash(self.password, password)
+    # Store hashed password
+    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-class Course(db.Model):
-    __tablename__ = 'courses'
-    course_id = db.Column(db.Integer, primary_key=True)
-    course_name = db.Column(db.String(64), unique=True, nullable=False)
-    course_description = db.Column(db.Text, nullable=True)
-    instructor_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
-    registrations = db.relationship('Registration', backref='course', lazy=True)
+    # Insert user into DynamoDB
+    users_table.put_item(
+        Item={
+            'user_id': user_id,
+            'first_name': first_name,
+            'last_name': last_name,
+            'password': hashed_password,
+            'role': role
+        }
+    )
+    return {"message": "User registered successfully", "user_id": user_id}, 201
 
-class Registration(db.Model):
-    __tablename__ = 'registrations'
-    registration_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey('courses.course_id'), nullable=False)
+def get_user_by_id(user_id):
+    """Retrieve a user from DynamoDB."""
+    response = users_table.get_item(Key={'user_id': user_id})
+    return response.get('Item')
+
+def get_course_by_id(course_id):
+    """Retrieve a course from DynamoDB."""
+    response = courses_table.get_item(Key={'course_id': course_id})
+    return response.get('Item')
+
+def register_user_for_course(user_id, course_id):
+    """Registers a user for a course in DynamoDB."""
+    # Check if user exists
+    user = get_user_by_id(user_id)
+    if not user:
+        return {"error": "User not found"}, 404
+
+    # Check if course exists
+    course = get_course_by_id(course_id)
+    if not course:
+        return {"error": "Course not found"}, 404
+
+    # Register the user for the course
+    registrations_table.put_item(
+        Item={
+            'registration_id': f"{user_id}_{course_id}",  # Unique registration ID
+            'user_id': user_id,
+            'course_id': course_id
+        }
+    )
+    return {"message": "User registered for course successfully"}, 201

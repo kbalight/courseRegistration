@@ -1,114 +1,121 @@
 # routes.py
 
-import os
-from flask import Blueprint, jsonify, render_template, redirect, url_for, flash, request
-from flask_login import login_user, logout_user, current_user, login_required
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
-from app.models import db, User, Course
-from app import create_app
 
-app = create_app()
+from flask import Blueprint, request, jsonify, render_template
+import boto3
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import create_access_token, jwt_required, JWTManager
+from app.models import users_table, courses_table, registrations_table, generate_user_id
 
-class RegistrationForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    password2 = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
-    submit = SubmitField('Register')
+auth = Blueprint('auth', __name__)
 
-    @staticmethod
-    def validate_username(username):
-        user = User.query.filter_by(username=username.data).first()
-        if user is not None:
-            raise ValidationError('Please use a different username.')
+bcrypt = Bcrypt()
 
-    @staticmethod
-    def validate_email(email):
-        user = User.query.filter_by(email=email.data).first()
-        if user is not None:
-            raise ValidationError('Please use a different email address.')
-
-class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    remember_me = BooleanField('Remember Me')
-    submit = SubmitField('Sign In')
-
-class CourseForm(FlaskForm):
-    course_name = StringField('Course Name', validators=[DataRequired()])
-    course_description = StringField('Course Description', validators=[DataRequired()])
-    submit = SubmitField('Submit')
-
-@app.route('/')
-def index():
-    template_path = os.path.join(app.template_folder, 'index.html')
-    print(f"Template path: {template_path}")
-    if os.path.exists(template_path):
-        return render_template('index.html')
-    else:
-        return "Template not found", 404
+@auth.route('/')
+def home():
+    return jsonify('Welcome to the Art Course Registration System!')
 
 
-
-    if not username or not email or not password:
-        return jsonify({'error': 'Missing required fields.'}), 400
-
-    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
-        return jsonify({'error': 'Username already registered.'}), 400
-
-    user = User(username=username, email=email, role='student')
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
-
-    return jsonify({'message': 'User registered successfully'}), 200
-
-@app.route('/register', methods=['GET', 'POST'])
+@auth.route('/api/register', methods=['POST'])
 def register():
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data, role='student')
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('Congratulations! You are now registered!', 'success')
-        return redirect(url_for('login'))
-    return render_template('register.html', title='Register', form=form)
+    """Handles user registration and stores user data in DynamoDB."""
+    data = request.get_json()
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+    password = data.get('password')
+    role = data.get('role')  # "Student", "Faculty", or "Admin"
 
-@app.route('/login', methods=['GET', 'POST'])
+    if not first_name or not last_name or not password or not role:
+        return jsonify({'error': 'All fields are required'}), 400
+
+    user_id = generate_user_id(first_name, last_name)
+
+    # Check if user exists
+    response = users_table.get_item(Key={'user_id': user_id})
+    if 'Item' in response:
+        return jsonify({'error': 'User already exists'}), 400
+
+    # Hash password
+    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    # Save user to DynamoDB
+    users_table.put_item(
+        Item={
+            'user_id': user_id,
+            'first_name': first_name,
+            'last_name': last_name,
+            'password': hashed_password,
+            'role': role
+        }
+    )
+
+    return jsonify({'message': 'Registration successful!', 'user_id': user_id}), 201
+
+@auth.route('/api/login', methods=['POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.username.data).first()
-        if user is None or not user.check_password(form.password.data):
-            flash('Invalid username or password', 'danger')
-            return redirect(url_for('login'))
-        login_user(user, remember=form.remember_me.data)
-        return redirect(url_for('index'))
-    return render_template('login.html', title='Sign In', form=form)
+    """Handles user authentication and returns a JWT token upon successful login."""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    password = data.get('password')
 
-@app.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
+    response = users_table.get_item(Key={'user_id': user_id})
 
-@app.route('/api/courses', methods=['GET'])
-@login_required
-def api_get_courses():
-    courses = Course.query.all()
-    return jsonify([{'course_id': course.course_id, 'course_name': course.course_name, 'course_description': course.course_description, 'instructor_id': course.instructor_id} for course in courses])
+    if 'Item' not in response:
+        return jsonify({'error': 'Invalid user ID or password'}), 401
 
-@app.route('/courses', methods=['GET'])
-@login_required
+    user = response['Item']
+
+    if not bcrypt.check_password_hash(user['password'], password):
+        return jsonify({'error': 'Invalid user ID or password'}), 401
+
+    access_token = create_access_token(identity={'user_id': user['user_id'], 'role': user['role']})
+
+    return jsonify({
+        'message': f'Welcome {user["first_name"]} {user["last_name"]}!',
+        'access_token': access_token,
+        'role': user['role']
+    }), 200
+
+@auth.route('/api/auth-check', methods=['GET'])
+@jwt_required()
+def auth_check():
+    """Endpoint to verify if a user is authenticated."""
+    current_user = request.get_json()
+    return jsonify({'message': 'User is authenticated', 'user': current_user}), 200
+
+@auth.route('/api/courses', methods=['GET'])
+@jwt_required()
 def get_courses():
-    courses = Course.query.all()
-    return jsonify([course.title for course in courses])
+    """Fetch all available courses from DynamoDB."""
+    response = courses_table.scan()
+    courses = response.get('Items', [])
 
-@app.route('/test-static')
-def test_static():
-    return app.send_static_file('css/styles.css')
+    return jsonify({'courses': courses}), 200
 
+@auth.route('/api/register-course', methods=['POST'])
+@jwt_required()
+def register_for_course():
+    """Registers a user for a course."""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    course_id = data.get('course_id')
+
+    # Check if user exists
+    user = users_table.get_item(Key={'user_id': user_id}).get('Item')
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Check if course exists
+    course = courses_table.get_item(Key={'course_id': course_id}).get('Item')
+    if not course:
+        return jsonify({'error': 'Course not found'}), 404
+
+    # Register the user for the course
+    registrations_table.put_item(
+        Item={
+            'registration_id': f"{user_id}_{course_id}",
+            'user_id': user_id,
+            'course_id': course_id
+        }
+    )
+    return jsonify({'message': 'User registered for course successfully'}), 201
