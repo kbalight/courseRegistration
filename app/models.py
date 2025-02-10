@@ -1,11 +1,9 @@
 # models.py
 
 import boto3
-from flask_bcrypt import Bcrypt
+from app import bcrypt
 from config import Config
-from app import app  # Import the Flask app instance
-
-bcrypt = Bcrypt(app)  # Initialize Bcrypt with the Flask app
+from flask import current_app as app
 
 # Set up AWS DynamoDB connection
 dynamodb = boto3.resource(

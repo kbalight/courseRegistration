@@ -1,13 +1,12 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 import boto3
-from flask_bcrypt import Bcrypt
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
-from app import app, Config  # Import the Flask app instance and Config
+from flask import current_app as app
+from app import bcrypt
+from config import Config
 from app.models import generate_user_id
 
-auth = Blueprint('auth', __name__)
-bcrypt = Bcrypt(app)  # Initialize Bcrypt with the Flask app
-jwt = JWTManager(app)  # Initialize JWTManager with the Flask app
+routes = Blueprint('routes', __name__)
 
 # Set up AWS DynamoDB connection
 dynamodb = boto3.resource(
@@ -23,11 +22,28 @@ courses_table = dynamodb.Table(Config.COURSES_TABLE)
 registrations_table = dynamodb.Table(Config.REGISTRATIONS_TABLE)
 faculty_table = dynamodb.Table(Config.FACULTY_TABLE)
 
-@auth.route('/')
+#Serve Frontend Pages
+@routes.route('/')
 def home():
-    return jsonify('Welcome to the Art Course Registration System!')
+    return render_template('index.html')
 
-@auth.route('/api/register', methods=['POST'])
+@routes.route('/login')
+def login():
+    return render_template('login.html')
+
+@routes.route('/register')
+def register_page():
+    return render_template('register.html')
+
+@routes.route('/courses')
+def courses_page():
+    response = courses_table.scan()
+    courses = response.get('Items', [])
+    return render_template('courses.html', courses=courses)
+
+#API Endpoints
+
+@routes.route('/api/register', methods=['POST'])
 def register():
     """Handles user registration and stores user data in DynamoDB."""
     data = request.get_json()
@@ -59,74 +75,46 @@ def register():
             'role': role
         }
     )
+    return jsonify({'message': 'User registered successfully', 'user_id': user_id}), 201
 
-    return jsonify({'message': 'Registration successful!', 'user_id': user_id}), 201
-
-@auth.route('/api/login', methods=['POST'])
-def login():
-    """Handles user authentication and returns a JWT token upon successful login."""
+@routes.route('/api/login', methods=['POST'])
+def login_user():
+    """Handles user login and generates JWT token."""
     data = request.get_json()
     user_id = data.get('user_id')
     password = data.get('password')
 
     response = users_table.get_item(Key={'user_id': user_id})
+    user = response.get('Item')
 
-    if 'Item' not in response:
-        return jsonify({'error': 'Invalid user ID or password'}), 401
+    if not user or not bcrypt.check_password_hash(user['password'], password):
+        return jsonify({'error': 'Invalid credentials'}), 401
 
-    user = response['Item']
+    access_token = create_access_token(identity=user_id)
+    return jsonify({'access_token': access_token}), 200
 
-    if not bcrypt.check_password_hash(user['password'], password):
-        return jsonify({'error': 'Invalid user ID or password'}), 401
-
-    access_token = create_access_token(identity={'user_id': user['user_id'], 'role': user['role']})
-
-    return jsonify({
-        'message': f'Welcome {user["first_name"]} {user["last_name"]}!',
-        'access_token': access_token,
-        'role': user['role']
-    }), 200
-
-@auth.route('/api/auth-check', methods=['GET'])
-@jwt_required()
-def auth_check():
-    """Endpoint to verify if a user is authenticated."""
-    current_user = request.get_json()
-    return jsonify({'message': 'User is authenticated', 'user': current_user}), 200
-
-@auth.route('/api/courses', methods=['GET'])
-@jwt_required()
+@routes.route('/api/courses', methods=['GET'])
 def get_courses():
-    """Fetch all available courses from DynamoDB."""
+    """Fetch all courses from the Courses table."""
     response = courses_table.scan()
-    courses = response.get('Items', [])
+    return jsonify(response.get('Items', []))
 
-    return jsonify({'courses': courses}), 200
-
-@auth.route('/api/register-course', methods=['POST'])
+@routes.route('/api/register-course', methods=['POST'])
 @jwt_required()
-def register_for_course():
+def register_course():
     """Registers a user for a course."""
     data = request.get_json()
     user_id = data.get('user_id')
     course_id = data.get('course_id')
 
-    # Check if user exists
-    user = users_table.get_item(Key={'user_id': user_id}).get('Item')
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    # Check if course exists
-    course = courses_table.get_item(Key={'course_id': course_id}).get('Item')
-    if not course:
-        return jsonify({'error': 'Course not found'}), 404
-
-    # Register the user for the course
     registrations_table.put_item(
-        Item={
-            'registration_id': f"{user_id}_{course_id}",
-            'user_id': user_id,
-            'course_id': course_id
-        }
+        Item={'registration_id': f'{user_id}_{course_id}', 'user_id': user_id, 'course_id': course_id}
     )
-    return jsonify({'message': 'User registered for course successfully'}, 201)
+    return jsonify({'message': 'Registration successful'}), 201
+
+@routes.route('/api/faculty', methods=['GET'])
+def get_faculty():
+    """Fetch all faculty members."""
+    response = faculty_table.scan()
+    return jsonify(response.get('Items', []))
+
