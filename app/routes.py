@@ -1,12 +1,35 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for
 import boto3
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
-from flask import current_app as app
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms.validators import DataRequired, EqualTo, Email
 from app import bcrypt
 from config import Config
 from app.models import generate_user_id
 
 routes = Blueprint('routes', __name__)
+
+# Define the LoginForm class
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember_me = BooleanField('Remember Me')
+    submit = SubmitField('Log In')
+
+# Define the RegistrationForm class
+class RegistrationForm(FlaskForm):
+    first_name = StringField('First Name', validators=[DataRequired()])
+    last_name = StringField('Last Name', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired(), EqualTo('confirm', message='Passwords must match')])
+    confirm = PasswordField('Confirm Password')
+    role = StringField('Role', validators=[DataRequired()])
+    submit = SubmitField('Register')
+
+# Function to generate a username
+def generate_username(first_name, last_name):
+    return f"{first_name.lower()}.{last_name.lower()}"
 
 # Set up AWS DynamoDB connection
 dynamodb = boto3.resource(
@@ -22,18 +45,53 @@ courses_table = dynamodb.Table(Config.COURSES_TABLE)
 registrations_table = dynamodb.Table(Config.REGISTRATIONS_TABLE)
 faculty_table = dynamodb.Table(Config.FACULTY_TABLE)
 
-#Serve Frontend Pages
+# Serve Frontend Pages
 @routes.route('/')
 def home():
     return render_template('index.html')
 
-@routes.route('/login')
+@routes.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_template('login.html')
+    form = LoginForm()
+    if form.validate_on_submit():
+        # Handle form submission logic here
+        flash('Login successful!', 'success')
+        return redirect(url_for('routes.home'))
+    return render_template('login.html', form=form)
 
-@routes.route('/register')
+@routes.route('/register', methods=['GET', 'POST'])
 def register_page():
-    return render_template('register.html')
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        # Handle form submission logic here
+        first_name = form.first_name.data
+        last_name = form.last_name.data
+        email = form.email.data
+        password = form.password.data
+        role = form.role.data
+
+        user_id = generate_user_id(first_name, last_name)
+        username = generate_username(first_name, last_name)
+
+        # Hash password
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        # Save user to DynamoDB
+        users_table.put_item(
+            Item={
+                'user_id': user_id,
+                'username': username,
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'password': hashed_password,
+                'role': role
+            }
+        )
+
+        flash(f'Registration successful! Your user ID is {user_id} and your username is {username}', 'success')
+        return redirect(url_for('routes.home'))
+    return render_template('register.html', form=form)
 
 @routes.route('/courses')
 def courses_page():
@@ -41,7 +99,7 @@ def courses_page():
     courses = response.get('Items', [])
     return render_template('courses.html', courses=courses)
 
-#API Endpoints
+# API Endpoints
 
 @routes.route('/api/register', methods=['POST'])
 def register():
@@ -56,6 +114,7 @@ def register():
         return jsonify({'error': 'All fields are required'}), 400
 
     user_id = generate_user_id(first_name, last_name)
+    username = generate_username(first_name, last_name)
 
     # Check if user exists
     response = users_table.get_item(Key={'user_id': user_id})
@@ -69,13 +128,14 @@ def register():
     users_table.put_item(
         Item={
             'user_id': user_id,
+            'username': username,
             'first_name': first_name,
             'last_name': last_name,
             'password': hashed_password,
             'role': role
         }
     )
-    return jsonify({'message': 'User registered successfully', 'user_id': user_id}), 201
+    return jsonify({'message': 'User registered successfully', 'user_id': user_id, 'username': username}), 201
 
 @routes.route('/api/login', methods=['POST'])
 def login_user():
@@ -117,4 +177,3 @@ def get_faculty():
     """Fetch all faculty members."""
     response = faculty_table.scan()
     return jsonify(response.get('Items', []))
-

@@ -4,7 +4,7 @@
 
 {% block content %}
     <h2>Login</h2>
-    <form method="POST" action="{{ url_for('routes.login_user') }}">
+    <form method="POST" action="{{ url_for('routes.login') }}">
         {{ form.hidden_tag() }}
         <div class="form-group">
             {{ form.username.label(class="form-control-label") }}
