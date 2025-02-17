@@ -11,14 +11,14 @@ from flask_jwt_extended import create_access_token
 class RoutesTestCase(unittest.TestCase):
 
     def setUp(self):
-        # Create the app using TestConfig
+    # Create the app using TestConfig
         self.app = create_app(TestConfig)
         self.app_context = self.app.app_context()
         self.app_context.push()
         self.client = self.app.test_client()
         self.bcrypt = Bcrypt(self.app)
 
-        # Generate a user_id (for example "johndoe")
+        # Generate a user_id
         self.user_id = generate_user_id("John", "Doe")
 
         # Create DynamoDB resources using the dummy credentials from TestConfig
@@ -29,37 +29,53 @@ class RoutesTestCase(unittest.TestCase):
             aws_secret_access_key=TestConfig.AWS_SECRET_ACCESS_KEY
         )
 
-        # Create the Users table (matching the expected schema)
+        # Create the Users table
         self.users_table = self.dynamodb.create_table(
             TableName=TestConfig.USERS_TABLE,
             KeySchema=[
-                {
-                    'AttributeName': 'user_id',
-                    'KeyType': 'HASH'  # Partition key
-                }
+                {'AttributeName': 'user_id', 'KeyType': 'HASH'}
             ],
             AttributeDefinitions=[
-                {
-                    'AttributeName': 'user_id',
-                    'AttributeType': 'S'
-                }
+                {'AttributeName': 'user_id', 'AttributeType': 'S'}
             ],
-            ProvisionedThroughput={
-                'ReadCapacityUnits': 5,
-                'WriteCapacityUnits': 5
-            }
+            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
         )
         self.users_table.wait_until_exists()
 
-        # Create a JWT token for testing protected routes.
-        # Use the role "Student" (capitalized) to match the expected role in your registration.
+        # Create the Courses table
+        self.courses_table = self.dynamodb.create_table(
+            TableName=TestConfig.COURSES_TABLE,
+            KeySchema=[
+                {'AttributeName': 'course_id', 'KeyType': 'HASH'}
+            ],
+            AttributeDefinitions=[
+                {'AttributeName': 'course_id', 'AttributeType': 'S'}
+            ],
+            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+        )
+        self.courses_table.wait_until_exists()
+
+        # Insert a test course into the Courses table
+        self.courses_table.put_item(
+        Item={
+            'course_id': 'A001',
+            'course_name': 'Introduction to Art',
+            'faculty_id': 'Dr. Smith',
+    }
+)
+
+        # Create a JWT token for testing protected routes
         self.access_token = create_access_token(identity={"user_id": self.user_id, "role": "Student"})
         self.headers = {"Authorization": f"Bearer {self.access_token}"}
 
     def tearDown(self):
-        # Delete the table inside the mock context
+        # Delete the tables inside the mock context
         self.users_table.delete()
         self.users_table.wait_until_not_exists()
+    
+        self.courses_table.delete()
+        self.courses_table.wait_until_not_exists()
+
         self.app_context.pop()
 
     def test_home_page(self):
