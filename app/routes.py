@@ -151,7 +151,18 @@ def login_user():
         return jsonify({'error': 'Invalid credentials'}), 401
 
     access_token = create_access_token(identity=user_id)
-    return jsonify({'access_token': access_token}), 200
+
+    # Retrieve first_name and last_name from user data
+    first_name = user.get('first_name', 'User')
+    last_name = user.get('last_name', '')
+
+    # Construct the welcome message
+    welcome_message = f"Welcome {first_name} {last_name}".strip()
+
+    return jsonify({
+        'access_token': access_token,
+        'message': welcome_message
+    }), 200
 
 @routes.route('/api/courses', methods=['GET'])
 def get_courses():
