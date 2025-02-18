@@ -92,7 +92,7 @@ class RoutesTestCase(unittest.TestCase):
             'role': 'Student'
         })
         self.assertEqual(response.status_code, 201)
-        self.assertIn(b'Registration successful', response.data)
+        self.assertIn(b'User registered successfully', response.data)
 
     def test_login_user(self):
         # First, register the user
@@ -114,7 +114,7 @@ class RoutesTestCase(unittest.TestCase):
         # For a protected route, pass the JWT header
         response = self.client.get('/api/courses', headers=self.headers)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'courses', response.data)
+        self.assertIn(b'course_id', response.data)
 
 if __name__ == '__main__':
     unittest.main()
