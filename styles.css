@@ -1,0 +1,97 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+/* Header */
+header {
+    background-color: #0044cc;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    position: relative;
+    z-index: 10;
+}
+
+/* Navigation Bar */
+.topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+}
+
+.logo {
+    width: 50px;
+    height: auto;
+}
+
+.topnav h1 {
+    flex-grow: 1;
+    font-size: 18px;
+    text-align: center;
+}
+
+/* Hamburger Menu Icon */
+.icon {
+    font-size: 24px;
+    cursor: pointer;
+    color: white;
+}
+
+/* Dropdown Menu Links (Hidden by Default) */
+#myLinks {
+    display: none;
+    flex-direction: column;
+    background-color: #0044cc;
+    width: 100%;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    text-align: center;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+#myLinks a {
+    color: white;
+    text-decoration: none;
+    padding: 12px 16px;
+    display: block;
+    border-bottom: 1px solid #ccc;
+}
+
+#myLinks a:hover {
+    background-color: #0033a0;
+}
+
+/* Show the menu when active */
+#myLinks.show {
+    display: flex;
+}
+
+/* Main Content Section */
+main {
+    padding: 20px;
+    text-align: center;
+    transition: margin-top 0.3s ease-in-out;
+}
+
+/* Adjust main section when menu is open */
+main.menu-open {
+    margin-top: 200px; /* Adjust this value to match dropdown height */
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    background-color: #0044cc;
+    color: white;
+    padding: 10px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
