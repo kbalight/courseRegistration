@@ -170,7 +170,7 @@ def get_courses():
     response = courses_table.scan()
     return jsonify(response.get('Items', []))
 
-@routes.route('/api/register-course', methods=['POST'])
+@routes.route('/api/register', methods=['POST'])
 @jwt_required()
 def register_course():
     """Registers a user for a course."""
