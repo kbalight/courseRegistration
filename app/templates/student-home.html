@@ -9,6 +9,39 @@
         <h3>Your Courses</h3>
         <p>No courses registered yet.</p>
     </section>
+
+    <button class="btn btn-primary" onclick="navigateToRegisterCourses()">Register for Courses</button>
+
+    <script>
+    function navigateToRegisterCourses() {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            alert('Please log in to register for courses.');
+            window.location.href = '/login';
+            return;
+        }
+        
+        fetch('/register-courses', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/register-courses';
+            } else if (response.status === 401) {
+                alert('Session expired. Please log in again.');
+                window.location.href = '/login';
+            } else {
+                alert('Failed to load the course registration page.');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading course registration page:', error);
+            alert('An unexpected error occurred.');
+        });
+    }
+    </script>
     
-    <a href="{{ url_for('routes.register_page') }}" class="btn btn-primary">Register for Courses</a>
 {% endblock %}

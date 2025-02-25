@@ -63,6 +63,11 @@ def login():
 def student_home():
     return render_template('student-home.html')
 
+@routes.route('/register-courses', methods=['GET'])
+def register_courses_page():
+    """Render the course registration page."""
+    return render_template('register-courses.html')
+
 @routes.route('/register', methods=['GET', 'POST'])
 def register_page():
     form = RegistrationForm()
@@ -184,7 +189,18 @@ def get_courses():
     response = courses_table.scan()
     return jsonify(response.get('Items', []))
 
-@routes.route('/api/register', methods=['POST'])
+@routes.route('/get_courses', methods=['GET'])
+@jwt_required()
+def get_courses_for_registration():
+    """Fetch all available courses for the registration page."""
+    try:
+        response = courses_table.scan()
+        courses = response.get('Items', [])
+        return jsonify(courses), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@routes.route('/api/register_course', methods=['POST'])
 @jwt_required()
 def register_course():
     """Registers a user for a course."""
@@ -192,10 +208,20 @@ def register_course():
     user_id = data.get('user_id')
     course_id = data.get('course_id')
 
-    registrations_table.put_item(
-        Item={'registration_id': f'{user_id}_{course_id}', 'user_id': user_id, 'course_id': course_id}
-    )
-    return jsonify({'message': 'Registration successful'}), 201
+    if not user_id or not course_id:
+        return jsonify({'error': 'User ID and Course ID are required'}), 400
+
+    try:
+        registrations_table.put_item(
+            Item={
+                'registration_id': f'{user_id}_{course_id}',
+                'user_id': user_id,
+                'course_id': course_id
+            }
+        )
+        return jsonify({'message': 'Registration successful'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @routes.route('/api/faculty', methods=['GET'])
 def get_faculty():

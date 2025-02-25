@@ -4,22 +4,50 @@
 
 {% block content %}
     <h2>Login</h2>
-    <form method="POST" action="{{ url_for('routes.login') }}">
-        {{ form.hidden_tag() }}
+    <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="form-group">
-            {{ form.username.label(class="form-control-label") }}
-            {{ form.username(class="form-control") }}
+            <label for="username">Username</label>
+            <input type="text" class="form-control" id="username" name="username" required>
         </div>
         <div class="form-group">
-            {{ form.password.label(class="form-control-label") }}
-            {{ form.password(class="form-control") }}
+            <label for="password">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
         </div>
-        <div class="form-group">
-            {{ form.remember_me(class="form-check-input") }}
-            {{ form.remember_me.label(class="form-check-label") }}
-        </div>
-        <div class="form-group">
-            {{ form.submit(class="btn btn-primary") }}
-        </div>
+        <button type="submit" class="btn btn-primary">Log In</button>
     </form>
+
+    <script>
+        async function handleLogin(event) {
+            event.preventDefault(); // Prevents the default form submission
+    
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+    
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ user_id: username, password: password })
+                });
+    
+                const data = await response.json();
+    
+                if (response.ok) {
+                    // Store the access token in localStorage
+                    localStorage.setItem('access_token', data.access_token);
+                    console.log('Redirecting to student home...');
+                    window.location.href = '/student-home'; // Redirect to student home
+                } else {
+                    alert(data.error || 'Login failed. Please check your credentials.');
+                }
+    
+            } catch (error) {
+                console.error('Error during login:', error);
+                alert('An unexpected error occurred. Please try again.');
+            }
+        }
+    </script>
+    
 {% endblock %}

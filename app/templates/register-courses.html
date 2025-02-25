@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Register for Courses{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h2 class="mb-4">Register for Courses</h2>
+        <section class="mb-5">
+            <h3>Available Courses</h3>
+            <table class="table table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Course ID</th>
+                        <th>Course Name</th>
+                        <th>Description</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="course-list">
+                    <!-- Courses will be populated here by JavaScript -->
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <script>
+        async function fetchCourses() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                alert('Please log in to view available courses.');
+                window.location.href = '/login';
+                return;
+            }
+            
+            const response = await fetch('/get_courses', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.status === 401) {
+                alert('Session expired. Please log in again.');
+                window.location.href = '/login';
+                return;
+            }
+
+            if (!response.ok) {
+                alert('Failed to fetch courses.');
+                return;
+            }
+
+            const courses = await response.json();
+            const courseList = document.getElementById('course-list');
+            courseList.innerHTML = '';
+            courses.forEach(course => {
+                courseList.innerHTML += `
+                    <tr>
+                        <td>${course.CourseID}</td>
+                        <td>${course.CourseName}</td>
+                        <td>${course.Description}</td>
+                        <td><button onclick="registerCourse('${course.CourseID}')" class="btn btn-success">Register</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.onload = fetchCourses;
+    </script>
+    
+{% endblock %}
