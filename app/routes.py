@@ -56,42 +56,56 @@ def login():
     if form.validate_on_submit():
         # Handle form submission logic here
         flash('Login successful!', 'success')
-        return redirect(url_for('routes.home'))
+        return redirect(url_for('routes.student_home'))
     return render_template('login.html', form=form)
+
+@routes.route('/student-home', methods=['GET'])
+def student_home():
+    return render_template('student-home.html')
 
 @routes.route('/register', methods=['GET', 'POST'])
 def register_page():
     form = RegistrationForm()
-    if form.validate_on_submit():
-        # Handle form submission logic here
-        first_name = form.first_name.data
-        last_name = form.last_name.data
-        email = form.email.data
-        password = form.password.data
-        role = form.role.data
 
-        user_id = generate_user_id(first_name, last_name)
-        username = generate_username(first_name, last_name)
+    # Handle form submission only on POST request
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            first_name = form.first_name.data
+            last_name = form.last_name.data
+            email = form.email.data
+            password = form.password.data
+            role = form.role.data
 
-        # Hash password
-        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+            user_id = generate_user_id(first_name, last_name)
+            username = generate_username(first_name, last_name)
 
-        # Save user to DynamoDB
-        users_table.put_item(
-            Item={
-                'user_id': user_id,
-                'username': username,
-                'first_name': first_name,
-                'last_name': last_name,
-                'email': email,
-                'password': hashed_password,
-                'role': role
-            }
-        )
+            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-        flash(f'Registration successful! Your user ID is {user_id} and your username is {username}', 'success')
-        return redirect(url_for('routes.home'))
+            try:
+                # Save user to DynamoDB
+                users_table.put_item(
+                    Item={
+                        'user_id': user_id,
+                        'username': username,
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'email': email,
+                        'password': hashed_password,
+                        'role': role
+                    }
+                )
+
+                flash(f'Registration successful! Your user ID is {user_id}.', 'success')
+                return redirect(url_for('routes.login'))
+
+            except Exception as e:
+                flash(f'An error occurred while registering: {str(e)}', 'danger')
+        
+        else:
+            flash(f'Form validation failed: {form.errors}', 'danger')
+
     return render_template('register.html', form=form)
+
 
 @routes.route('/courses')
 def courses_page():

@@ -1,0 +1,137 @@
+{
+    "Items": [
+        {
+            "password": {
+                "S": "hashed_password_2"
+            },
+            "user_id": {
+                "S": "U002"
+            },
+            "last_name": {
+                "S": "Smith"
+            },
+            "email": {
+                "S": "bob.smith@example.com"
+            },
+            "first_name": {
+                "S": "Bob"
+            }
+        },
+        {
+            "password": {
+                "S": "$2b$12$fYC9Sftf7x1892m8ZGAE4.lAkyzsv5cT/wdayOgPehSXYPViwbtcq"
+            },
+            "user_id": {
+                "S": "johndoe"
+            },
+            "last_name": {
+                "S": "Doe"
+            },
+            "role": {
+                "S": "Student"
+            },
+            "first_name": {
+                "S": "John"
+            }
+        },
+        {
+            "password": {
+                "S": "$2b$12$zPsq9poG4nY6yXNSYaXQfuPt8gNgXiD21oac1ItfruJOBrm24PyXe"
+            },
+            "user_id": {
+                "S": "myname"
+            },
+            "role": {
+                "S": "student"
+            },
+            "last_name": {
+                "S": "name"
+            },
+            "first_name": {
+                "S": "my"
+            },
+            "username": {
+                "S": "my.name"
+            },
+            "email": {
+                "S": "testmail@mail.com"
+            }
+        },
+        {
+            "password": {
+                "S": "hashed_password_1"
+            },
+            "user_id": {
+                "S": "U001"
+            },
+            "last_name": {
+                "S": "Johnson"
+            },
+            "email": {
+                "S": "alice.johnson@example.com"
+            },
+            "first_name": {
+                "S": "Alice"
+            }
+        },
+        {
+            "password": {
+                "S": "$2b$12$YCmHtw4B2jvK7WftPrLuSOUzXETtQFh.CN/G40OBlS4FqJst8zJI."
+            },
+            "user_id": {
+                "S": "my2name2"
+            },
+            "role": {
+                "S": "student"
+            },
+            "last_name": {
+                "S": "name2"
+            },
+            "first_name": {
+                "S": "my2"
+            },
+            "username": {
+                "S": "my2.name2"
+            },
+            "email": {
+                "S": "test2@mail.com"
+            }
+        },
+        {
+            "password": {
+                "S": "hashed_password_4"
+            },
+            "user_id": {
+                "S": "U004"
+            },
+            "last_name": {
+                "S": "Brown"
+            },
+            "email": {
+                "S": "david.brown@example.com"
+            },
+            "first_name": {
+                "S": "David"
+            }
+        },
+        {
+            "password": {
+                "S": "hashed_password_3"
+            },
+            "user_id": {
+                "S": "U003"
+            },
+            "last_name": {
+                "S": "Davis"
+            },
+            "email": {
+                "S": "carol.davis@example.com"
+            },
+            "first_name": {
+                "S": "Carol"
+            }
+        }
+    ],
+    "Count": 7,
+    "ScannedCount": 7
+}
