@@ -1,0 +1,107 @@
+{
+    "Items": [
+        {
+            "course_description": {
+                "S": "Learn the basics of painting, including techniques, color theory, and composition."
+            },
+            "course_name": {
+                "S": "Introduction to Painting"
+            },
+            "course_id": {
+                "S": "ART101"
+            },
+            "faculty_id": {
+                "S": "F001"
+            },
+            "semester": {
+                "S": "Spring 2025"
+            },
+            "status": {
+                "S": "Open"
+            }
+        },
+        {
+            "course_description": {
+                "S": "Learn the basics of Python."
+            },
+            "course_name": {
+                "S": "Introduction to Python"
+            },
+            "course_id": {
+                "S": "C001"
+            },
+            "faculty_id": {
+                "S": "F001"
+            },
+            "semester": {
+                "S": "Fall 2025"
+            },
+            "status": {
+                "S": "Open"
+            }
+        },
+        {
+            "course_description": {
+                "S": "Study the history of art from ancient times to the modern era."
+            },
+            "course_name": {
+                "S": "Art History"
+            },
+            "course_id": {
+                "S": "ART104"
+            },
+            "faculty_id": {
+                "S": "F004"
+            },
+            "semester": {
+                "S": "Spring 2025"
+            },
+            "status": {
+                "S": "Open"
+            }
+        },
+        {
+            "course_description": {
+                "S": "Explore various sculpture techniques using different materials such as clay, wood, and metal."
+            },
+            "course_name": {
+                "S": "Sculpture Techniques"
+            },
+            "course_id": {
+                "S": "ART102"
+            },
+            "faculty_id": {
+                "S": "F002"
+            },
+            "semester": {
+                "S": "Spring 2025"
+            },
+            "status": {
+                "S": "Open"
+            }
+        },
+        {
+            "course_description": {
+                "S": "Learn digital art and design techniques using software like Adobe Photoshop and Illustrator."
+            },
+            "course_name": {
+                "S": "Digital Art and Design"
+            },
+            "course_id": {
+                "S": "ART103"
+            },
+            "faculty_id": {
+                "S": "F003"
+            },
+            "semester": {
+                "S": "Spring 2025"
+            },
+            "status": {
+                "S": "Open"
+            }
+        }
+    ],
+    "Count": 5,
+    "ScannedCount": 5,
+    "ConsumedCapacity": null
+}

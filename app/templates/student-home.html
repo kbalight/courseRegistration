@@ -23,37 +23,45 @@
             return;
         }
 
-        const response = await fetch('/api/user_courses', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
+        try {
+            const response = await fetch('/api/user_courses', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const courseList = document.getElementById('user-courses');
+            courseList.innerHTML = '';
+
+            if (response.status === 401) {
+                alert('Session expired. Please log in again.');
+                window.location.href = '/login';
+                return;
             }
-        });
 
-        const courseList = document.getElementById('user-courses');
-        courseList.innerHTML = '';
+            if (!response.ok) {
+                courseList.innerHTML = '<p class="text-danger">Failed to load courses.</p>';
+                return;
+            }
 
-        if (response.status === 401) {
-            alert('Session expired. Please log in again.');
-            window.location.href = '/login';
-            return;
+            const courses = await response.json();
+            console.log('Courses received:', courses);  // ✅ Debugging
+
+            if (courses.length === 0) {
+                courseList.innerHTML = '<p>No courses registered yet.</p>';
+                return;
+            }
+
+            // Display courses in a list
+            courseList.innerHTML = courses
+                .map(course => `<li>${course.course_id || course.course_name || 'Unknown Course'}</li>`)
+                .join('');
+
+        } catch (error) {
+            console.error('Error fetching courses:', error);
+            document.getElementById('user-courses').innerHTML = '<p class="text-danger">Error loading courses.</p>';
         }
-
-        if (!response.ok) {
-            courseList.innerHTML = '<p class="text-danger">Failed to load courses.</p>';
-            return;
-        }
-
-        const courses = await response.json();
-
-        if (courses.length === 0) {
-            courseList.innerHTML = '<p>No courses registered yet.</p>';
-            return;
-        }
-
-        courses.forEach(course => {
-            courseList.innerHTML += `<li>${course.course_id}</li>`;
-        });
     }
 
     function navigateToRegisterCourses() {
