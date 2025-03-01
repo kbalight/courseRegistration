@@ -14,7 +14,7 @@ class Config:
     # DynamoDB Table Names
     USERS_TABLE = 'Users'
     COURSES_TABLE = 'Courses'
-    REGISTRATIONS_TABLE = 'Registrations'
+    REGISTRATIONS_TABLE = 'Registration'
     FACULTY_TABLE = 'Faculty'
 
 class TestConfig(Config):

@@ -7,41 +7,59 @@
 
     <section class="mb-5">
         <h3>Your Courses</h3>
-        <p>No courses registered yet.</p>
+        <ul id="user-courses">
+            <p>Loading your courses...</p>
+        </ul>
     </section>
 
     <button class="btn btn-primary" onclick="navigateToRegisterCourses()">Register for Courses</button>
 
     <script>
-    function navigateToRegisterCourses() {
+    async function fetchUserCourses() {
         const token = localStorage.getItem('access_token');
         if (!token) {
-            alert('Please log in to register for courses.');
+            alert('Please log in to view your courses.');
             window.location.href = '/login';
             return;
         }
-        
-        fetch('/register-courses', {
+
+        const response = await fetch('/api/user_courses', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
             }
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.href = '/register-courses';
-            } else if (response.status === 401) {
-                alert('Session expired. Please log in again.');
-                window.location.href = '/login';
-            } else {
-                alert('Failed to load the course registration page.');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading course registration page:', error);
-            alert('An unexpected error occurred.');
+        });
+
+        const courseList = document.getElementById('user-courses');
+        courseList.innerHTML = '';
+
+        if (response.status === 401) {
+            alert('Session expired. Please log in again.');
+            window.location.href = '/login';
+            return;
+        }
+
+        if (!response.ok) {
+            courseList.innerHTML = '<p class="text-danger">Failed to load courses.</p>';
+            return;
+        }
+
+        const courses = await response.json();
+
+        if (courses.length === 0) {
+            courseList.innerHTML = '<p>No courses registered yet.</p>';
+            return;
+        }
+
+        courses.forEach(course => {
+            courseList.innerHTML += `<li>${course.course_id}</li>`;
         });
     }
+
+    function navigateToRegisterCourses() {
+        window.location.href = '/register-courses';
+    }
+
+    window.onload = fetchUserCourses;
     </script>
-    
 {% endblock %}

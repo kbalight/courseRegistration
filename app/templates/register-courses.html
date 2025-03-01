@@ -66,6 +66,32 @@
             });
         }
 
+        async function registerCourse(courseID) {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                alert('Please log in to register for courses.');
+                window.location.href = '/login';
+                return;
+            }
+
+            const response = await fetch('/api/register_course', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ course_id: courseID })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('Successfully registered for the course!');
+            } else {
+                alert(`Registration failed: ${data.error || 'Unknown error'}`);
+            }
+        }
+
         window.onload = fetchCourses;
     </script>
     

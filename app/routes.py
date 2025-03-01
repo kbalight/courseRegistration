@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for
 import boto3
-from flask_jwt_extended import create_access_token, jwt_required, JWTManager
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, EqualTo, Email
@@ -204,22 +204,42 @@ def get_courses_for_registration():
 @jwt_required()
 def register_course():
     """Registers a user for a course."""
+    user_id = get_jwt_identity()  # ✅ Get user_id from JWT token
     data = request.get_json()
-    user_id = data.get('user_id')
     course_id = data.get('course_id')
 
-    if not user_id or not course_id:
-        return jsonify({'error': 'User ID and Course ID are required'}), 400
+    if not course_id:
+        return jsonify({'error': 'Course ID is required'}), 400
 
     try:
         registrations_table.put_item(
             Item={
-                'registration_id': f'{user_id}_{course_id}',
+                'registration_id': f'{user_id}_{course_id}',  # Unique ID
                 'user_id': user_id,
                 'course_id': course_id
             }
         )
         return jsonify({'message': 'Registration successful'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@routes.route('/api/user_courses', methods=['GET'])
+@jwt_required()
+def get_user_courses():
+    """Fetch all courses the logged-in user is registered for."""
+    user_id = get_jwt_identity()  # ✅ Get user ID from JWT token
+
+    try:
+        # Query the Registration table for courses registered by the user
+        response = registrations_table.scan(
+            FilterExpression="user_id = :user_id",
+            ExpressionAttributeValues={":user_id": user_id}
+        )
+
+        registered_courses = response.get('Items', [])
+
+        return jsonify(registered_courses), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
